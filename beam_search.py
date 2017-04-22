@@ -21,26 +21,35 @@ import numpy as np
 import random
 import sys
 import utils
-
-LSTM_WIDTH = 256
+import re
 
 MODEL_NAME = 'model_shakespeare.hd5'
-
-test_sentence = '#have i forgotten myself so far that i have not even told you his name ?_'
-#test_sentence = "#i do not know what you are talking about !_"
+MODEL_NAME = 'model_wmt.hd5'
 
 
 path_shakespeare = get_file('shakespeare.txt', origin='http://norvig.com/ngrams/shakespeare.txt')
 text_shakespeare = open(path_shakespeare).read()
 text_shakespeare = text_shakespeare.lower().replace('\n', ' ').replace('=', ' ').replace(r"\\'", " ")
 
+path_wmt = 'WMT2014_train.en'
+text_wmt = open(path_wmt).read()
+text_wmt = text_wmt.lower().replace('\n', ' ').replace('=', ' ').replace(r"\\'", " ")
+# text_wmt = text_wmt.encode('ascii',errors='ignore')
+text_wmt = re.sub(r'[^\x00-\x7f]',r'', text_wmt)
+print('corpus length, WMT:', len(text_wmt))
+
 sentences_shakespeare = np.array(utils.split_into_sentences(text_shakespeare))
 sentences_shakespeare = sorted(sentences_shakespeare, key=len)
-chars = sorted(list(set("".join(sentences_shakespeare))))
+chars_shakespeare = sorted(list(set("".join(sentences_shakespeare))))
 
+sentences_wmt = np.array(utils.split_into_sentences(text_wmt))
+sentences_wmt = sorted(sentences_wmt, key=len)
+chars_wmt = sorted(list(set("".join(sentences_wmt))))
 
+print('total chars, Shakespear:', len(chars_shakespeare))
+print('total chars, WMT:', len(chars_wmt))
 
-
+chars = sorted(list(set(chars_wmt + chars_shakespeare)))
 
 def beam_search(model, sentence_enc, start_frag_enc, beam_width, num_candidates):
     num_chars = sentence_enc.shape[-1]
@@ -82,13 +91,14 @@ def beam_search(model, sentence_enc, start_frag_enc, beam_width, num_candidates)
 
 
 
-
+test_sentence = '#have i forgotten myself so far that i have not even told you his name ?_'
+test_sentence = "#i do not know what you are talking about !_"
 
 model = load_model(MODEL_NAME)
 
 sentence_enc = utils.sentence_encode(test_sentence, chars)
 fragment_enc = utils.sentence_encode('#', chars)
 
-sentence_predicted = beam_search(model, sentence_enc, fragment_enc, beam_width=20, num_candidates=5)
+sentence_predicted = beam_search(model, sentence_enc, fragment_enc, beam_width=10, num_candidates=5)
 
 a=1;

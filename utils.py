@@ -32,6 +32,8 @@ def split_into_sentences(text):
     if "!" in text: text = text.replace("!\"","\"!")
     if "?" in text: text = text.replace("?\"","\"?")
     #if "\'" in text: text = text.replace("\'", " ")
+    text = text.replace(" &apos;", "\'")
+    text = text.replace("&quot;", '"')
     text = text.replace(". ","."+SENTENCE_END+"<stop> ")
     text = text.replace("? ","?"+SENTENCE_END+"<stop> ")
     text = text.replace("! ","!"+SENTENCE_END+"<stop> ")
