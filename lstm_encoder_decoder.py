@@ -13,6 +13,7 @@ import sys
 import re
 import string
 import tensorflow as tf
+from itertools import compress
 
 
 config = tf.ConfigProto(allow_soft_placement=True)
@@ -21,7 +22,8 @@ session = tf.Session(config=config)
 K.set_session(session=session)
 
 DROPOUT = 0.1
-SENTENCE_BATCH_SIZE = 64
+SENTENCE_TRAIN_BATCH_SIZE = 32
+SENTENCE_VALIDATION_BATCH_SIZE = 128
 LSTM_WIDTH = 512
 SENTENCE_START = '#'
 SENTENCE_END = '_'
@@ -95,7 +97,7 @@ sentences_wmt = np.array(split_into_sentences(text_wmt))
 sentences_wmt = sorted(sentences_wmt, key=len)
 chars_wmt = sorted(list(set("".join(sentences_wmt))))
 
-print('total chars, Shakespear:', len(chars_shakespeare))
+print('total chars, Shakespeare:', len(chars_shakespeare))
 print('total chars, WMT:', len(chars_wmt))
 
 chars = sorted(list(set(chars_wmt + chars_shakespeare)))
@@ -103,21 +105,22 @@ char_indices = dict((c, i) for i, c in enumerate(chars))
 indices_char = dict((i, c) for i, c in enumerate(chars))
 
 
-def text_generator(sentences):
+def text_generator(sentences, batch_size):
     cum_count = 0
     while 1:
         count = 0
         cum_count += 1
-        for i in range(0, len(sentences), SENTENCE_BATCH_SIZE):  # len(sentences)
-            print('batch number: ', count, ', cumulative batch number: ', cum_count)
+        batch_size = min(batch_size, len(sentences))
+        for i in range(0, len(sentences), batch_size):  # len(sentences)
+            #print('batch number: ', count, ', cumulative batch number: ', cum_count)
             count += 1
 
-            sentence_batch = sentences[i:i + SENTENCE_BATCH_SIZE]
+            sentence_batch = sentences[i:i + batch_size]
             maxlen_batch = len(max(sentence_batch, key=len))
 
-            X = np.zeros((SENTENCE_BATCH_SIZE, maxlen_batch, len(chars)), dtype=np.int32)
-            y = np.zeros((SENTENCE_BATCH_SIZE, maxlen_batch, len(chars)), dtype=np.int32)
-            w = np.zeros((SENTENCE_BATCH_SIZE, maxlen_batch), dtype=np.int32)
+            X = np.zeros((batch_size, maxlen_batch, len(chars)), dtype=np.int32)
+            y = np.zeros((batch_size, maxlen_batch, len(chars)), dtype=np.int32)
+            w = np.zeros((batch_size, maxlen_batch), dtype=np.int32)
 
             for i, sentence in enumerate(sentence_batch):
 
@@ -206,22 +209,47 @@ def sample(preds, temperature=1.0):
     probas = np.random.multinomial(1, preds, 1)
     return np.argmax(probas)
 
+shakespeare_train_idx = np.random.uniform(size=(len(sentences_shakespeare),)) < 0.9
+shakespeare_train_gen = text_generator(list(compress(sentences_shakespeare, shakespeare_train_idx)), SENTENCE_TRAIN_BATCH_SIZE)
+shakespeare_validation_gen = text_generator(list(compress(sentences_shakespeare, np.invert(shakespeare_train_idx))), SENTENCE_VALIDATION_BATCH_SIZE)
 
-shakespeare_gen = text_generator(sentences_shakespeare)
-wmt_gen = text_generator(sentences_wmt)
+wmt_train_idx = np.random.uniform(size=(len(sentences_wmt),)) < 0.9
+wmt_train_gen = text_generator(list(compress(sentences_wmt, wmt_train_idx)), SENTENCE_TRAIN_BATCH_SIZE)
+wmt_validation_gen = text_generator(list(compress(sentences_wmt, np.invert(wmt_train_idx))), SENTENCE_VALIDATION_BATCH_SIZE)
 
-for iteration in range(0, 100):
+for iteration in range(0, 1000):
     print()
     print('-' * 50)
     print('Iteration', iteration)
 
-    # if iteration % 10 == 0:
-    wmt_autoencoder.save('model_wmt.hd5')
-    wmt_autoencoder.fit_generator(wmt_gen,
-                                  1000, # steps_per_epoch=len(sentences_wmt) / SENTENCE_BATCH_SIZE - 10,
-                                  epochs=1, verbose=1, workers=1)
-
     shakespeare_autoencoder.save('model_shakespeare.hd5')
-    shakespeare_autoencoder.fit_generator(shakespeare_gen,
-                                steps_per_epoch=len(sentences_shakespeare) / SENTENCE_BATCH_SIZE - 10,
-                                epochs=1, verbose=1, workers=1)
+    wmt_autoencoder.save('model_wmt.hd5')
+
+    if iteration < 10:
+        shakespeare_autoencoder.fit_generator(shakespeare_train_gen,
+                                              steps_per_epoch=sum(
+                                                  shakespeare_train_idx) / SENTENCE_TRAIN_BATCH_SIZE / 10 - 10,
+                                              epochs=1, verbose=1, workers=1)
+
+        wmt_autoencoder.fit_generator(wmt_train_gen,
+                                      100,  # steps_per_epoch=len(sentences_wmt) / SENTENCE_TRAIN_BATCH_SIZE - 10,
+                                      epochs=1, verbose=1, workers=1)
+
+    else:
+        shakespeare_autoencoder.fit_generator(shakespeare_train_gen,
+                                              steps_per_epoch=sum(
+                                                  shakespeare_train_idx) / SENTENCE_TRAIN_BATCH_SIZE - 10,
+                                              validation_data=shakespeare_validation_gen,
+                                              validation_steps=sum(np.invert(
+                                                  shakespeare_train_idx)) / SENTENCE_VALIDATION_BATCH_SIZE - 10,
+                                              epochs=1, verbose=1, workers=1)
+        if iteration % 1 == 0:
+            wmt_autoencoder.fit_generator(wmt_train_gen,
+                                          1000,  # steps_per_epoch=len(sentences_wmt) / SENTENCE_TRAIN_BATCH_SIZE - 10,
+                                          validation_data=wmt_validation_gen,
+                                          validation_steps=sum(
+                                              np.invert(wmt_train_idx)) / SENTENCE_VALIDATION_BATCH_SIZE - 10,
+                                          epochs=1, verbose=1, workers=1)
+
+
+
