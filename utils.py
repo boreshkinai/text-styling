@@ -64,3 +64,75 @@ def sentence_decode(sentence_enc, chars):
     for t in range(len(predicted_symbols)):
         predicted_sec += indices_char[predicted_symbols[t]]
     return predicted_sec
+
+
+def text_generator_deterministic(sentences, char_indices, batch_size, corruption_pr):
+    cum_count = 0
+    while 1:
+        count = 0
+        cum_count += 1
+        batch_size = min(batch_size, len(sentences))
+        for i in range(0, len(sentences), batch_size):  # len(sentences)
+            #print('batch number: ', count, ', cumulative batch number: ', cum_count)
+            count += 1
+
+            sentence_batch = sentences[i:i + batch_size]
+            maxlen_batch = len(max(sentence_batch, key=len))
+
+            X = np.zeros((batch_size, maxlen_batch, len(char_indices)), dtype=np.int32)
+            X_teacher = np.zeros((batch_size, maxlen_batch, len(char_indices)), dtype=np.int32)
+            y = np.zeros((batch_size, maxlen_batch, len(char_indices)), dtype=np.int32)
+            w = np.zeros((batch_size, maxlen_batch), dtype=np.int32)
+
+            for i, sentence in enumerate(sentence_batch):
+                corruption_flag = np.random.uniform(0.0, 1.0, len(sentence)) < corruption_pr
+                corrupted_sym = np.random.random_integers(low=0, high=len(char_indices)-1, size=len(sentence))
+                for t, char in enumerate(sentence):
+                    X[i, t, char_indices[char]] = 1
+                    if corruption_flag[t]:
+                        X_teacher[i, t, corrupted_sym[t]] = 1
+                    else:
+                        X_teacher[i, t, char_indices[char]] = 1
+
+                for t in range(len(sentence) - 1):
+                    taget_pos = t + 1
+                    y[i, t, char_indices[sentence[taget_pos]]] = 1
+                    w[i, t] = 1
+
+            yield ([X, X_teacher], y, w)
+
+
+def text_generator_random(sentences, char_indices, batch_size, corruption_pr):
+    cum_count = 0
+    while 1:
+        count = 0
+        cum_count += 1
+        batch_size = min(batch_size, len(sentences))
+        batch_start = np.random.random_integers(0, len(sentences)-batch_size, 1)[0]
+
+        count += 1
+
+        sentence_batch = sentences[batch_start:batch_start + batch_size]
+        maxlen_batch = len(max(sentence_batch, key=len))
+
+        X = np.zeros((batch_size, maxlen_batch, len(char_indices)), dtype=np.int32)
+        X_teacher = np.zeros((batch_size, maxlen_batch, len(char_indices)), dtype=np.int32)
+        y = np.zeros((batch_size, maxlen_batch, len(char_indices)), dtype=np.int32)
+        w = np.zeros((batch_size, maxlen_batch), dtype=np.int32)
+
+        for i, sentence in enumerate(sentence_batch):
+            corruption_flag = np.random.uniform(0.0, 1.0, len(sentence)) < corruption_pr
+            corrupted_sym = np.random.random_integers(low=0, high=len(char_indices)-1, size=len(sentence))
+            for t, char in enumerate(sentence):
+                X[i, t, char_indices[char]] = 1
+                if corruption_flag[t]:
+                    X_teacher[i, t, corrupted_sym[t]] = 1
+                else:
+                    X_teacher[i, t, char_indices[char]] = 1
+
+            for t in range(len(sentence) - 1):
+                taget_pos = t + 1
+                y[i, t, char_indices[sentence[taget_pos]]] = 1
+                w[i, t] = 1
+
+        yield ([X, X_teacher], y, w)
