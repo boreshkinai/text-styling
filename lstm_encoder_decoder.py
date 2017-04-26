@@ -14,6 +14,7 @@ import re
 import string
 import tensorflow as tf
 from itertools import compress
+import utils
 
 
 config = tf.ConfigProto(allow_soft_placement=True)
@@ -21,9 +22,10 @@ config.gpu_options.allow_growth = True
 session = tf.Session(config=config)
 K.set_session(session=session)
 
-DROPOUT = 0.1
-SENTENCE_TRAIN_BATCH_SIZE = 32
-SENTENCE_VALIDATION_BATCH_SIZE = 128
+CORRUPTION_PR = 0.3
+DROPOUT = 0.2
+SENTENCE_TRAIN_BATCH_SIZE = 64
+SENTENCE_VALIDATION_BATCH_SIZE = 256
 LSTM_WIDTH = 512
 SENTENCE_START = '#'
 SENTENCE_END = '_'
@@ -105,34 +107,7 @@ char_indices = dict((c, i) for i, c in enumerate(chars))
 indices_char = dict((i, c) for i, c in enumerate(chars))
 
 
-def text_generator(sentences, batch_size):
-    cum_count = 0
-    while 1:
-        count = 0
-        cum_count += 1
-        batch_size = min(batch_size, len(sentences))
-        for i in range(0, len(sentences), batch_size):  # len(sentences)
-            #print('batch number: ', count, ', cumulative batch number: ', cum_count)
-            count += 1
 
-            sentence_batch = sentences[i:i + batch_size]
-            maxlen_batch = len(max(sentence_batch, key=len))
-
-            X = np.zeros((batch_size, maxlen_batch, len(chars)), dtype=np.int32)
-            y = np.zeros((batch_size, maxlen_batch, len(chars)), dtype=np.int32)
-            w = np.zeros((batch_size, maxlen_batch), dtype=np.int32)
-
-            for i, sentence in enumerate(sentence_batch):
-
-                for t, char in enumerate(sentence):
-                    X[i, t, char_indices[char]] = 1
-
-                for t in range(len(sentence) - 1):
-                    taget_pos = t + 1
-                    y[i, t, char_indices[sentence[taget_pos]]] = 1
-                    w[i, t] = 1
-
-            yield ([X, X], y, w)
 
 
 print('Build model...')
@@ -210,12 +185,12 @@ def sample(preds, temperature=1.0):
     return np.argmax(probas)
 
 shakespeare_train_idx = np.random.uniform(size=(len(sentences_shakespeare),)) < 0.9
-shakespeare_train_gen = text_generator(list(compress(sentences_shakespeare, shakespeare_train_idx)), SENTENCE_TRAIN_BATCH_SIZE)
-shakespeare_validation_gen = text_generator(list(compress(sentences_shakespeare, np.invert(shakespeare_train_idx))), SENTENCE_VALIDATION_BATCH_SIZE)
+shakespeare_train_gen = utils.text_generator_deterministic(list(compress(sentences_shakespeare, shakespeare_train_idx)), char_indices, SENTENCE_TRAIN_BATCH_SIZE, corruption_pr=CORRUPTION_PR)
+shakespeare_validation_gen = utils.text_generator_deterministic(list(compress(sentences_shakespeare, np.invert(shakespeare_train_idx))), char_indices, SENTENCE_VALIDATION_BATCH_SIZE, corruption_pr=CORRUPTION_PR)
 
 wmt_train_idx = np.random.uniform(size=(len(sentences_wmt),)) < 0.9
-wmt_train_gen = text_generator(list(compress(sentences_wmt, wmt_train_idx)), SENTENCE_TRAIN_BATCH_SIZE)
-wmt_validation_gen = text_generator(list(compress(sentences_wmt, np.invert(wmt_train_idx))), SENTENCE_VALIDATION_BATCH_SIZE)
+wmt_train_gen = utils.text_generator_random(list(compress(sentences_wmt, wmt_train_idx)), char_indices, SENTENCE_TRAIN_BATCH_SIZE, corruption_pr=CORRUPTION_PR)
+wmt_validation_gen = utils.text_generator_deterministic(list(compress(sentences_wmt, np.invert(wmt_train_idx))), char_indices, SENTENCE_VALIDATION_BATCH_SIZE, corruption_pr=CORRUPTION_PR)
 
 for iteration in range(0, 1000):
     print()
