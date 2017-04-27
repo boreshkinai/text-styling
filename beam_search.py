@@ -23,8 +23,7 @@ import sys
 import utils
 import re
 
-#MODEL_NAME = 'model_shakespeare.hd5'
-MODEL_NAME = 'model_wmt.hd5'
+
 
 
 path_shakespeare = get_file('shakespeare.txt', origin='http://norvig.com/ngrams/shakespeare.txt')
@@ -91,11 +90,16 @@ def beam_search(model, sentence_enc, start_frag_enc, beam_width, num_candidates)
 
 
 
-#test_sentence = '#have i forgotten myself so far that i have not even told you his name ?_'
+test_sentence = '#have i forgotten myself so far that i have not even told you his name ?_'
 test_sentence = "#i do not know what you are talking about !_"
 
 #test_sentence = "#i do not understand you !_"
+test_sentence = "#what can i tell you , my friend ?_"
+#test_sentence = "#a house is a building that functions as a home ._"
 
+
+MODEL_NAME = 'model_shakespeare.hd5'
+MODEL_NAME = 'model_wmt.hd5'
 
 model = load_model(MODEL_NAME)
 

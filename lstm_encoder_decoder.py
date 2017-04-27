@@ -22,7 +22,7 @@ config.gpu_options.allow_growth = True
 session = tf.Session(config=config)
 K.set_session(session=session)
 
-CORRUPTION_PR = 0.3
+CORRUPTION_PR = 0.0
 DROPOUT = 0.2
 SENTENCE_TRAIN_BATCH_SIZE = 64
 SENTENCE_VALIDATION_BATCH_SIZE = 256
@@ -129,19 +129,19 @@ def concat_context(inputs):
 def get_encoder(lstm_width, dropout):
     context_input = Input(shape=(None, len(chars)))
     x = Masking(mask_value=0)(context_input)
-    x = GRU(lstm_width, return_sequences=True, go_backwards=True, dropout=dropout)(x)
-    x = GRU(lstm_width, return_sequences=True, dropout=dropout)(x)
+    x = GRU(lstm_width, return_sequences=True, go_backwards=True, dropout=dropout, recurrent_dropout=dropout)(x)
+    x = GRU(lstm_width, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)(x)
     # xf = GRU(LSTM_WIDTH, return_sequences=True, go_backwards=False, dropout=0.0)(x)
     # x = Concatenate(axis=2)([xf, xb])
-    encoder_output = GRU(lstm_width, return_sequences=False, dropout=dropout)(x)
+    encoder_output = GRU(lstm_width, return_sequences=False, dropout=dropout, recurrent_dropout=dropout)(x)
 
     return Model(inputs=[context_input], outputs=[encoder_output])
 
 
-def get_autoencoder(encoder, lstm_width, dropout):
+def get_decoder_shared(encoder_in, lstm_width, dropout):
 
     context_input = Input(shape=(None, len(chars)))
-    encoder_output = encoder(context_input)
+    encoder_output = encoder_in(context_input)
 
     teacher_input = Input(shape=(None, len(chars)))
     decoder_input = Masking(mask_value=0)(teacher_input)
@@ -149,26 +149,38 @@ def get_autoencoder(encoder, lstm_width, dropout):
     context_layer1 = Lambda(concat_context)
     decoder_input_c = context_layer1([decoder_input, encoder_output])
 
-    y1 = GRU(lstm_width, return_sequences=True, dropout=dropout)(decoder_input_c)
-    y2 = GRU(lstm_width, return_sequences=True, dropout=dropout)(y1)
-    y3 = GRU(lstm_width, return_sequences=True, dropout=dropout)(y2)
+    y1 = GRU(lstm_width, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)(decoder_input_c)
+    y2 = GRU(lstm_width, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)(y1)
+
+    return Model(inputs=[context_input, teacher_input], outputs=[y2, encoder_output])
+
+
+def get_decoder_split(decoder_shared_in, lstm_width, dropout):
+
+    context_input = Input(shape=(None, len(chars)))
+    teacher_input = Input(shape=(None, len(chars)))
+    shared_output = decoder_shared_in([context_input, teacher_input])
+
+    y2 = shared_output[0]
+    encoder_output = shared_output[1]
+
+    y3 = GRU(lstm_width, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)(y2)
 
     context_layer2 = Lambda(concat_context)
     decoder_appended = context_layer2([y3, encoder_output])
 
+    decoder_appended = TimeDistributed(Dropout(0.5))(decoder_appended)
     decoder_appended = TimeDistributed(Dense(lstm_width, activation='relu'))(decoder_appended)
     decoder_appended = TimeDistributed(Dropout(0.5))(decoder_appended)
     decoder_output = TimeDistributed(Dense(len(chars), activation='softmax'))(decoder_appended)
 
     return Model(inputs=[context_input, teacher_input], outputs=[decoder_output])
 
-
-
 encoder = get_encoder(lstm_width=LSTM_WIDTH, dropout=DROPOUT)
+decoder_shared = get_decoder_shared(encoder_in=encoder, lstm_width=LSTM_WIDTH, dropout=DROPOUT)
 
-shakespeare_autoencoder = get_autoencoder(encoder, lstm_width=LSTM_WIDTH, dropout=DROPOUT)
-wmt_autoencoder = get_autoencoder(encoder, lstm_width=LSTM_WIDTH, dropout=DROPOUT)
-
+shakespeare_autoencoder = get_decoder_split(decoder_shared_in=decoder_shared, lstm_width=LSTM_WIDTH, dropout=DROPOUT)
+wmt_autoencoder = get_decoder_split(decoder_shared_in=decoder_shared, lstm_width=LSTM_WIDTH, dropout=DROPOUT)
 
 optimizer = Adam(clipnorm=1.0)
 shakespeare_autoencoder.compile(loss='categorical_crossentropy', metrics=['categorical_accuracy'], optimizer=optimizer, sample_weight_mode="temporal")
@@ -185,7 +197,7 @@ def sample(preds, temperature=1.0):
     return np.argmax(probas)
 
 shakespeare_train_idx = np.random.uniform(size=(len(sentences_shakespeare),)) < 0.9
-shakespeare_train_gen = utils.text_generator_deterministic(list(compress(sentences_shakespeare, shakespeare_train_idx)), char_indices, SENTENCE_TRAIN_BATCH_SIZE, corruption_pr=CORRUPTION_PR)
+shakespeare_train_gen = utils.text_generator_random(list(compress(sentences_shakespeare, shakespeare_train_idx)), char_indices, SENTENCE_TRAIN_BATCH_SIZE, corruption_pr=CORRUPTION_PR)
 shakespeare_validation_gen = utils.text_generator_deterministic(list(compress(sentences_shakespeare, np.invert(shakespeare_train_idx))), char_indices, SENTENCE_VALIDATION_BATCH_SIZE, corruption_pr=CORRUPTION_PR)
 
 wmt_train_idx = np.random.uniform(size=(len(sentences_wmt),)) < 0.9
@@ -202,25 +214,23 @@ for iteration in range(0, 1000):
 
     if iteration < 10:
         shakespeare_autoencoder.fit_generator(shakespeare_train_gen,
-                                              steps_per_epoch=sum(
-                                                  shakespeare_train_idx) / SENTENCE_TRAIN_BATCH_SIZE / 10 - 10,
+                                              steps_per_epoch=25,
                                               epochs=1, verbose=1, workers=1)
 
         wmt_autoencoder.fit_generator(wmt_train_gen,
-                                      100,  # steps_per_epoch=len(sentences_wmt) / SENTENCE_TRAIN_BATCH_SIZE - 10,
+                                      25,  # steps_per_epoch=len(sentences_wmt) / SENTENCE_TRAIN_BATCH_SIZE - 10,
                                       epochs=1, verbose=1, workers=1)
 
     else:
         shakespeare_autoencoder.fit_generator(shakespeare_train_gen,
-                                              steps_per_epoch=sum(
-                                                  shakespeare_train_idx) / SENTENCE_TRAIN_BATCH_SIZE - 10,
+                                              steps_per_epoch=250, # sum(shakespeare_train_idx) / SENTENCE_TRAIN_BATCH_SIZE - 10,
                                               validation_data=shakespeare_validation_gen,
                                               validation_steps=sum(np.invert(
                                                   shakespeare_train_idx)) / SENTENCE_VALIDATION_BATCH_SIZE - 10,
                                               epochs=1, verbose=1, workers=1)
         if iteration % 1 == 0:
             wmt_autoencoder.fit_generator(wmt_train_gen,
-                                          1000,  # steps_per_epoch=len(sentences_wmt) / SENTENCE_TRAIN_BATCH_SIZE - 10,
+                                          250,  # steps_per_epoch=len(sentences_wmt) / SENTENCE_TRAIN_BATCH_SIZE - 10,
                                           validation_data=wmt_validation_gen,
                                           validation_steps=sum(
                                               np.invert(wmt_train_idx)) / SENTENCE_VALIDATION_BATCH_SIZE - 10,
