@@ -148,7 +148,8 @@ def text_backwards_generator_random(sentences, char_indices, batch_size, corrupt
 
         count += 1
 
-        sentence_batch = sentences[batch_start:batch_start + batch_size]
+        sentence_batch = list(map(revert_sentense, sentences[batch_start:batch_start + batch_size]))
+
         maxlen_batch = len(max(sentence_batch, key=len))
 
         X = np.zeros((batch_size, maxlen_batch, len(char_indices)), dtype=np.int32)
