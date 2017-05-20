@@ -105,12 +105,12 @@ def beam_search(model, sentence_enc, start_frag_enc, beam_width, num_candidates)
 
 
 MODEL_NAME = 'model_shakespeare.hd5'
-#MODEL_NAME = 'model_wmt.hd5'
+MODEL_NAME = 'model_wmt.hd5'
 
 test_sentence = '#have i forgotten myself so far that i have not even told you his name ?_'
 test_sentence = "#i do not know what you are talking about !_"
-test_sentence = "#i believe robots are the future !_"
-test_sentence = "#this is not important ._"
+# test_sentence = "#i believe robots are the future !_"
+#test_sentence = "#this is not important ._"
 #test_sentence = "#please let me live in piece !_"
 
 #test_sentence = "#i do not understand you !_"

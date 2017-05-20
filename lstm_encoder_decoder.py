@@ -145,9 +145,8 @@ def get_decoder_shared(encoder_in, lstm_width, dropout):
     decoder_input_c = context_layer1([decoder_input, encoder_output])
 
     y1 = LSTM(lstm_width, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)(decoder_input_c)
-    y2 = LSTM(lstm_width, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)(y1)
 
-    return Model(inputs=[context_input, teacher_input], outputs=[y2, encoder_output])
+    return Model(inputs=[context_input, teacher_input], outputs=[y1, encoder_output])
 
 
 def get_decoder_split(decoder_shared_in, lstm_width, dropout):
@@ -155,17 +154,18 @@ def get_decoder_split(decoder_shared_in, lstm_width, dropout):
     teacher_input = Input(shape=(None, len(chars)))
     shared_output = decoder_shared_in([context_input, teacher_input])
 
-    y2 = shared_output[0]
+    y1 = shared_output[0]
     encoder_output = shared_output[1]
 
+    y2 = LSTM(lstm_width, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)(y1)
     y3 = LSTM(lstm_width, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)(y2)
 
     context_layer2 = Lambda(concat_context)
     decoder_appended = context_layer2([y3, encoder_output])
 
     decoder_appended = TimeDistributed(Dropout(0.5))(decoder_appended)
-    decoder_appended = TimeDistributed(Dense(lstm_width, activation='relu'))(decoder_appended)
-    decoder_appended = TimeDistributed(Dropout(0.5))(decoder_appended)
+    #decoder_appended = TimeDistributed(Dense(lstm_width, activation='relu'))(decoder_appended)
+    #decoder_appended = TimeDistributed(Dropout(0.5))(decoder_appended)
     decoder_output = TimeDistributed(Dense(len(chars), activation='softmax'))(decoder_appended)
 
     return Model(inputs=[context_input, teacher_input], outputs=[decoder_output])
