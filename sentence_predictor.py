@@ -29,8 +29,8 @@ TRAIN_SPLIT_SHAKESPEARE = 0.9
 CORRUPTION_PR = 0.0
 DROPOUT = 0.2
 SENTENCE_TRAIN_BATCH_SIZE = 32
-SENTENCE_VALIDATION_BATCH_SIZE = 128
-LSTM_WIDTH = 512
+SENTENCE_VALIDATION_BATCH_SIZE = 32
+LSTM_WIDTH = 256
 RNN_FUNC = keras.layers.GRU
 SENTENCE_START = '#'
 SENTENCE_END = '_'
@@ -169,9 +169,10 @@ def get_encoder(lstm_width, dropout):
 
     x_fw = RNN_FUNC(lstm_width // 2, return_sequences=True, go_backwards=False, dropout=dropout, recurrent_dropout=dropout)(
         x_conv)
-    x_bw = RNN_FUNC(lstm_width // 2, return_sequences=True, go_backwards=True, dropout=dropout, recurrent_dropout=dropout)(
-        x_conv)
-    x = Concatenate(axis=2)([x_fw, x_bw])
+    # x_bw = RNN_FUNC(lstm_width // 2, return_sequences=True, go_backwards=True, dropout=dropout, recurrent_dropout=dropout)(
+    #     x_conv)
+    # x = Concatenate(axis=2)([x_fw, x_bw])
+    x=x_fw
 
     encoder_output = RNN_FUNC(lstm_width, return_sequences=False, dropout=dropout, recurrent_dropout=dropout)(x)
 
@@ -285,13 +286,13 @@ shakespeare_validation_gen = utils.sentence_predict_generator_random(
 
 
 tsb_shakespeare = TensorBoard(log_dir=TSB_DIR_SHAKESPEARE, histogram_freq=1, write_graph=True)
-chp_shakespeare = ModelCheckpoint(filepath='checkpoints/'+MODEL_NAME+'.{epoch:02d}-{val_loss:.2f}-{val_categorical_accuracy:.2f}.hdf5',
-                      monitor='val_categorical_accuracy', save_best_only=True, verbose=1)
+chp_shakespeare = ModelCheckpoint(filepath='checkpoints/'+MODEL_NAME+'.{epoch:05d}-{val_loss:.3f}-{val_categorical_accuracy:.3f}.hdf5',
+                      monitor='val_categorical_accuracy', save_best_only=False, verbose=1, period=10)
 
-for iteration in range(0, 1000):
-    print()
-    print('-' * 50)
-    print('Iteration', iteration)
+# for iteration in range(0, 1000):
+#     print()
+#     print('-' * 50)
+#     print('Iteration', iteration)
 
 
     # if iteration < 10:
@@ -304,12 +305,12 @@ for iteration in range(0, 1000):
 
     # else:
 
-    shakespeare_autoencoder_forward.fit_generator(shakespeare_train_gen,
+shakespeare_autoencoder_forward.fit_generator(shakespeare_train_gen,
                                                       steps_per_epoch=100,
                                                       validation_data=shakespeare_validation_gen,
                                                       validation_steps=sum(np.invert(
                                                           shakespeare_train_idx)) / SENTENCE_VALIDATION_BATCH_SIZE - 10,
-                                                      epochs=1, verbose=1, workers=1,
+                                                      epochs=1000, verbose=1, workers=1,
                                                     callbacks=[tsb_shakespeare, chp_shakespeare])
 
         # wmt_autoencoder_backward.fit_generator(wmt_train_gen_backward,
