@@ -137,7 +137,7 @@ print('Build model...')
 def concat_context(inputs):
     seq = inputs[0]
     c = inputs[1]
-    c_tiled = K.tile(K.reshape(c, [-1, 1, 512]), (1, K.shape(seq)[1], 1))
+    c_tiled = K.tile(K.reshape(c, [-1, 1, 256]), (1, K.shape(seq)[1], 1))
     out = K.concatenate([seq, c_tiled], axis=2)
 
     boolean_mask = K.any(K.not_equal(seq, 0), axis=-1, keepdims=True)
