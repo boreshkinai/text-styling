@@ -194,13 +194,14 @@ def get_decoder_shared(encoder, lstm_width, dropout):
     x_prenet = TimeDistributed(prenet_2)(x_prenet)
     x_prenet = Dropout(0.5)(x_prenet)
 
-    # convolutional stack
-    x_conv = Conv1D(filters=128, kernel_size=2, strides=1, padding='same', activation='relu')(x_prenet)
-    x_conv = BatchNormalization(axis=2)(x_conv)
-    x_conv = MaxPooling1D(pool_size=2, strides=1, padding='same')(x_conv)
-    x_conv = Conv1D(filters=128, kernel_size=3, strides=1, padding='same', activation='relu')(x_conv)
-    x_conv = BatchNormalization(axis=2)(x_conv)
-    x_conv = MaxPooling1D(pool_size=2, strides=1, padding='same')(x_conv)
+    # # convolutional stack
+    # x_conv = Conv1D(filters=128, kernel_size=2, strides=1, padding='same', activation='relu')(x_prenet)
+    # x_conv = BatchNormalization(axis=2)(x_conv)
+    # x_conv = MaxPooling1D(pool_size=2, strides=1, padding='same')(x_conv)
+    # x_conv = Conv1D(filters=128, kernel_size=3, strides=1, padding='same', activation='relu')(x_conv)
+    # x_conv = BatchNormalization(axis=2)(x_conv)
+    # x_conv = MaxPooling1D(pool_size=2, strides=1, padding='same')(x_conv)
+    x_conv = x_prenet
 
     context_layer1 = Lambda(concat_context)
     decoder_input_c = context_layer1([x_conv, encoder_output])
@@ -244,7 +245,7 @@ shakespeare_autoencoder_forward = get_decoder_split(decoder_shared=decoder_share
 #                                              dropout=DROPOUT)
 
 optimizer = Adam(lr=0.001, clipnorm=1.0)
-shakespeare_autoencoder_forward.compile(loss='categorical_crossentropy', metrics=['categorical_accuracy'],
+shakespeare_autoencoder_forward.compile(loss='categorical_crossentropy', metrics=[utils.categorical_accuracy_nonzero],
                                         optimizer=optimizer, sample_weight_mode="temporal")
 # wmt_autoencoder_forward.compile(loss='categorical_crossentropy', metrics=['categorical_accuracy'], optimizer=optimizer,
 #                                 sample_weight_mode="temporal")
@@ -287,7 +288,7 @@ shakespeare_validation_gen = utils.sentence_predict_generator_random(
 
 tsb_shakespeare = TensorBoard(log_dir=TSB_DIR_SHAKESPEARE, histogram_freq=1, write_graph=True)
 chp_shakespeare = ModelCheckpoint(filepath='checkpoints/'+MODEL_NAME+'.{epoch:05d}-{val_loss:.3f}-{val_categorical_accuracy:.3f}.hdf5',
-                      monitor='val_categorical_accuracy', save_best_only=False, verbose=1, period=10)
+                      monitor='val_categorical_accuracy_nonzero', save_best_only=False, verbose=1, period=10)
 
 # for iteration in range(0, 1000):
 #     print()
