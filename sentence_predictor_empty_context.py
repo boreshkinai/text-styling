@@ -264,7 +264,7 @@ shakespeare_validation_gen = utils.sentence_predict_generator_context_empty(
 
 
 tsb_shakespeare = TensorBoard(log_dir=TSB_DIR_SHAKESPEARE, histogram_freq=1, write_graph=True)
-chp_shakespeare = ModelCheckpoint(filepath='logs/'+MODEL_NAME+'.{epoch:05d}-{val_loss:.3f}-{val_categorical_accuracy:.3f}.hdf5',
+chp_shakespeare = ModelCheckpoint(filepath='logs/'+MODEL_NAME+'.{epoch:05d}-{val_loss:.3f}-{val_categorical_accuracy_nonzero:.3f}.hdf5',
                       monitor='val_categorical_accuracy_nonzero', save_best_only=False, verbose=1, period=10)
 
 
