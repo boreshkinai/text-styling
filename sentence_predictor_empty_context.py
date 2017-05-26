@@ -145,7 +145,6 @@ def concat_context(inputs):
 
     return out * K.cast(boolean_mask, K.floatx())
 
-
 def get_encoder(lstm_width, dropout):
 
     input = Input(shape=(None, len(chars)))
@@ -195,13 +194,14 @@ def get_decoder_shared(encoder, lstm_width, dropout):
     x_prenet = TimeDistributed(prenet_2)(x_prenet)
     x_prenet = Dropout(0.5)(x_prenet)
 
-    # convolutional stack
-    x_conv = Conv1D(filters=128, kernel_size=2, strides=1, padding='same', activation='relu')(x_prenet)
-    x_conv = BatchNormalization(axis=2)(x_conv)
-    x_conv = MaxPooling1D(pool_size=2, strides=1, padding='same')(x_conv)
-    x_conv = Conv1D(filters=128, kernel_size=3, strides=1, padding='same', activation='relu')(x_conv)
-    x_conv = BatchNormalization(axis=2)(x_conv)
-    x_conv = MaxPooling1D(pool_size=2, strides=1, padding='same')(x_conv)
+    # # convolutional stack
+    # x_conv = Conv1D(filters=128, kernel_size=2, strides=1, padding='same', activation='relu')(x_prenet)
+    # x_conv = BatchNormalization(axis=2)(x_conv)
+    # x_conv = MaxPooling1D(pool_size=2, strides=1, padding='same')(x_conv)
+    # x_conv = Conv1D(filters=128, kernel_size=3, strides=1, padding='same', activation='relu')(x_conv)
+    # x_conv = BatchNormalization(axis=2)(x_conv)
+    # x_conv = MaxPooling1D(pool_size=2, strides=1, padding='same')(x_conv)
+    x_conv = x_prenet
 
     context_layer1 = Lambda(concat_context)
     decoder_input_c = context_layer1([x_conv, encoder_output])
@@ -226,9 +226,12 @@ def get_decoder_split(decoder_shared, lstm_width, dropout):
     decoder_appended = context_layer2([y3, encoder_output])
 
     decoder_appended = TimeDistributed(Dropout(0.5))(decoder_appended)
+    #decoder_appended = TimeDistributed(Dense(lstm_width, activation='relu'))(decoder_appended)
+    #decoder_appended = TimeDistributed(Dropout(0.5))(decoder_appended)
     decoder_output = TimeDistributed(Dense(len(chars), activation='softmax'))(decoder_appended)
 
     return Model(inputs=[context_input, teacher_input], outputs=[decoder_output])
+
 
 
 encoder = get_encoder(lstm_width=LSTM_WIDTH, dropout=DROPOUT)
