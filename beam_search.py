@@ -104,8 +104,7 @@ def beam_search(model, sentence_enc, start_frag_enc, beam_width, num_candidates)
         print()
 
 
-MODEL_NAME = 'model_shakespeare.hd5'
-MODEL_NAME = 'model_wmt.hd5'
+MODEL_NAME = 'logs/sentence_predictor_shakespeare_gru_prenet_conv_lr_anneal.00999-1.289-0.603.hdf5'
 
 test_sentence = '#have i forgotten myself so far that i have not even told you his name ?_'
 test_sentence = "#i do not know what you are talking about !_"
