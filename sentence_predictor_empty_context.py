@@ -265,7 +265,15 @@ shakespeare_validation_gen = utils.sentence_predict_generator_context_empty(
     sentences_shakespeare, np.invert(shakespeare_train_idx), char_indices,
     SENTENCE_VALIDATION_BATCH_SIZE, corruption_pr=CORRUPTION_PR)
 
+def schedule(epoch):
+    lr = 0.001
+    if (epoch > 100):
+        lr = 0.0002
+    elif (epoch > 200):
+        lr = 0.0001
+    return lr
 
+lr_schedule_shakespeare = LearningRateScheduler(schedule=schedule)
 tsb_shakespeare = TensorBoard(log_dir=TSB_DIR_SHAKESPEARE, histogram_freq=1, write_graph=True)
 chp_shakespeare = ModelCheckpoint(filepath='logs/'+MODEL_NAME+'.{epoch:05d}-{val_loss:.3f}-{val_categorical_accuracy_nonzero:.3f}.hdf5',
                       monitor='val_categorical_accuracy_nonzero', save_best_only=False, verbose=1, period=10)
@@ -277,5 +285,5 @@ shakespeare_autoencoder_forward.fit_generator(shakespeare_train_gen,
                                                       validation_steps=sum(np.invert(
                                                           shakespeare_train_idx)) / SENTENCE_VALIDATION_BATCH_SIZE - 10,
                                                       epochs=1000, verbose=1, workers=1,
-                                                    callbacks=[tsb_shakespeare, chp_shakespeare])
+                                                    callbacks=[tsb_shakespeare, chp_shakespeare, lr_schedule_shakespeare])
 
