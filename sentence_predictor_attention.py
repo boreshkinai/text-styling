@@ -36,7 +36,7 @@ SENTENCE_START = '#'
 SENTENCE_END = '_'
 
 LOG_DIR = './logs/'
-MODEL_NAME = 'sentence_predictor_shakespeare_gru_prenet_conv_lr_anneal'
+MODEL_NAME = 'sentence_predictor_shakespeare_gru_prenet_conv_lr_anneal_attention'
 TSB_DIR_SHAKESPEARE = LOG_DIR + MODEL_NAME
 
 caps = "([A-Z])"
