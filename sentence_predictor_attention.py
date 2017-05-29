@@ -36,7 +36,7 @@ SENTENCE_START = '#'
 SENTENCE_END = '_'
 
 LOG_DIR = './logs/'
-MODEL_NAME = 'sentence_predictor_shakespeare_gru_prenet_conv_lr_anneal_attention'
+MODEL_NAME = 'sentence_predictor_shakespeare_gru_bidir_prenet_conv_lr_anneal_attention'
 TSB_DIR_SHAKESPEARE = LOG_DIR + MODEL_NAME
 
 caps = "([A-Z])"
@@ -199,10 +199,10 @@ def get_encoder(lstm_width, dropout):
 
     x_fw = RNN_FUNC(lstm_width // 2, return_sequences=True, go_backwards=False, dropout=dropout, recurrent_dropout=dropout)(
         x_conv)
-    # x_bw = RNN_FUNC(lstm_width // 2, return_sequences=True, go_backwards=True, dropout=dropout, recurrent_dropout=dropout)(
-    #     x_conv)
-    # x = Concatenate(axis=2)([x_fw, x_bw])
-    x=x_fw
+    x_bw = RNN_FUNC(lstm_width // 2, return_sequences=True, go_backwards=True, dropout=dropout, recurrent_dropout=dropout)(
+        x_conv)
+    x = Concatenate(axis=2)([x_fw, x_bw])
+    # x=x_fw
 
     encoder_output = RNN_FUNC(lstm_width, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)(x)
 
