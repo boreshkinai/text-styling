@@ -125,7 +125,7 @@ print('Build model...')
 
 
 def attention(inputs):
-    DIM_A = 128
+    DIM_A = 32
     # This is based on [1] Bohdanau 2014 and [2] https://arxiv.org/pdf/1703.10089.pdf
     # i is the number of steps in the decoder sequence
     # j is the number of steps in the context sequence
