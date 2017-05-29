@@ -343,7 +343,7 @@ shakespeare_autoencoder_forward.fit_generator(shakespeare_train_gen,
                                                       validation_data=shakespeare_validation_gen,
                                                       validation_steps=sum(np.invert(
                                                           shakespeare_train_idx)) / SENTENCE_VALIDATION_BATCH_SIZE - 10,
-                                                      epochs=1000, verbose=1, workers=1,
+                                                      epochs=2000, verbose=1, workers=1,
                                                     callbacks=[tsb_shakespeare, chp_shakespeare, lr_schedule_shakespeare])
 
         # wmt_autoencoder_backward.fit_generator(wmt_train_gen_backward,
