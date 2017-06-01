@@ -135,13 +135,15 @@ def attention(inputs):
     teacher_shape = K.shape(teacher_seq)
     i = teacher_shape[1]
 
-    # Transformaition layers, eq. 3 in [2]
-    Wa = Dense(DIM_A, activation='linear', name='Wa')
-    Ua = Dense(DIM_A, activation='linear', name='Ua')
-
+    # # Transformaition layers, eq. 3 in [2]
+    # Wa = Dense(DIM_A, activation='linear', name='Wa')
+    # Ua = Dense(DIM_A, activation='linear', name='Ua')
     # apply linear transformations in equation (3) in [2]
-    teacher_seq_wa = TimeDistributed(Wa)(teacher_seq)
-    context_seq_ua = TimeDistributed(Ua)(context_seq)
+    # teacher_seq_wa = TimeDistributed(Wa)(teacher_seq)
+    # context_seq_ua = TimeDistributed(Ua)(context_seq)
+    teacher_seq_wa = Conv1D(filters=DIM_A, kernel_size=1, strides=1, activation='linear')(teacher_seq)
+    context_seq_ua = Conv1D(filters=DIM_A, kernel_size=1, strides=1, activation='linear')(context_seq)
+
     # tile to be able to produce weight matrix alpha in (i,j) space
     context_seq_ua = K.reshape(context_seq_ua, [-1, j, 1, DIM_A])
     teacher_seq_wa = K.reshape(teacher_seq_wa, [-1, i, 1, DIM_A])
