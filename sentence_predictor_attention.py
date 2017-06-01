@@ -248,11 +248,8 @@ def get_decoder_split(decoder_shared, lstm_width, dropout):
     y1 = shared_output[0]
     ci = shared_output[1]
 
-    y2 = Concatenate()([y1, ci])
-    y2 = RNN_FUNC(lstm_width, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)(y2)
-
-    y3 = Concatenate()([y2, ci])
-    y3 = RNN_FUNC(lstm_width, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)(y3)
+    y2 = RNN_FUNC(lstm_width, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)(y1)
+    y3 = RNN_FUNC(lstm_width, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)(y2)
 
     decoder_appended = Concatenate()([y3, ci])
 
