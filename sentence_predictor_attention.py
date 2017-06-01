@@ -190,19 +190,21 @@ def get_encoder(lstm_width, dropout):
     x_prenet = Dropout(0.5)(x_prenet)
 
     # convolutional stack
-    x_conv = Conv1D(filters=128, kernel_size=2, strides=1, padding='same', activation='relu')(x_prenet)
+    x_conv = Conv1D(filters=128, kernel_size=2, strides=2, padding='same', activation='relu')(x_prenet)
     x_conv = BatchNormalization(axis=2)(x_conv)
-    x_conv = MaxPooling1D(pool_size=2, strides=2)(x_conv)
-    x_conv = Conv1D(filters=128, kernel_size=3, strides=1, padding='same', activation='relu')(x_conv)
+    # x_conv = MaxPooling1D(pool_size=2, strides=2)(x_conv)
+    x_conv = Conv1D(filters=128, kernel_size=3, strides=2, padding='same', activation='relu')(x_conv)
     x_conv = BatchNormalization(axis=2)(x_conv)
-    x_conv = MaxPooling1D(pool_size=2, strides=2)(x_conv)
+    x_conv = Conv1D(filters=128, kernel_size=3, strides=2, padding='same', activation='relu')(x_conv)
+    x_conv = BatchNormalization(axis=2)(x_conv)
+    # x_conv = MaxPooling1D(pool_size=2, strides=2)(x_conv)
 
     x_fw = RNN_FUNC(lstm_width // 2, return_sequences=True, go_backwards=False, dropout=dropout, recurrent_dropout=dropout)(
         x_conv)
-    x_bw = RNN_FUNC(lstm_width // 2, return_sequences=True, go_backwards=True, dropout=dropout, recurrent_dropout=dropout)(
-        x_conv)
-    x = Concatenate(axis=2)([x_fw, x_bw])
-    # x=x_fw
+    #x_bw = RNN_FUNC(lstm_width // 2, return_sequences=True, go_backwards=True, dropout=dropout, recurrent_dropout=dropout)(
+    #    x_conv)
+    #x = Concatenate(axis=2)([x_fw, x_bw])
+    x=x_fw
 
     encoder_output = RNN_FUNC(lstm_width, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)(x)
 
@@ -244,8 +246,11 @@ def get_decoder_split(decoder_shared, lstm_width, dropout):
     y1 = shared_output[0]
     ci = shared_output[1]
 
-    y2 = RNN_FUNC(lstm_width, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)(y1)
-    y3 = RNN_FUNC(lstm_width, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)(y2)
+    y2 = Concatenate()([y1, ci])
+    y2 = RNN_FUNC(lstm_width, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)(y2)
+
+    y3 = Concatenate()([y2, ci])
+    y3 = RNN_FUNC(lstm_width, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)(y3)
 
     decoder_appended = Concatenate()([y3, ci])
 
@@ -271,6 +276,7 @@ shakespeare_autoencoder_forward = get_decoder_split(decoder_shared=decoder_share
 optimizer = Adam(lr=0.001, clipnorm=1.0)
 shakespeare_autoencoder_forward.compile(loss='categorical_crossentropy', metrics=[utils.categorical_accuracy_nonzero],
                                         optimizer=optimizer, sample_weight_mode="temporal")
+shakespeare_autoencoder_forward.summary()
 # wmt_autoencoder_forward.compile(loss='categorical_crossentropy', metrics=['categorical_accuracy'], optimizer=optimizer,
 #                                 sample_weight_mode="temporal")
 # wmt_autoencoder_backward.compile(loss='categorical_crossentropy', metrics=['categorical_accuracy'], optimizer=optimizer,
