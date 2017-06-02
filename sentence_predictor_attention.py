@@ -125,6 +125,8 @@ print('Build model...')
 
 
 def attention(inputs):
+    from keras.layers.convolutional import Conv1D, Conv2D
+
     DIM_A = 32
     # This is based on [1] Bohdanau 2014 and [2] https://arxiv.org/pdf/1703.10089.pdf
     # i is the number of steps in the decoder sequence
@@ -192,14 +194,12 @@ def get_encoder(lstm_width, dropout):
     x_prenet = Dropout(0.5)(x_prenet)
 
     # convolutional stack
-    x_conv = Conv1D(filters=128, kernel_size=2, strides=2, padding='same', activation='relu')(x_prenet)
+    x_conv = Conv1D(filters=128, kernel_size=2, strides=1, padding='same', activation='relu')(x_prenet)
     x_conv = BatchNormalization(axis=2)(x_conv)
-    # x_conv = MaxPooling1D(pool_size=2, strides=2)(x_conv)
-    x_conv = Conv1D(filters=128, kernel_size=3, strides=2, padding='same', activation='relu')(x_conv)
+    x_conv = MaxPooling1D(pool_size=2, strides=2)(x_conv)
+    x_conv = Conv1D(filters=128, kernel_size=3, strides=1, padding='same', activation='relu')(x_conv)
     x_conv = BatchNormalization(axis=2)(x_conv)
-    x_conv = Conv1D(filters=128, kernel_size=3, strides=2, padding='same', activation='relu')(x_conv)
-    x_conv = BatchNormalization(axis=2)(x_conv)
-    # x_conv = MaxPooling1D(pool_size=2, strides=2)(x_conv)
+    x_conv = MaxPooling1D(pool_size=2, strides=2)(x_conv)
 
     x_fw = RNN_FUNC(lstm_width // 2, return_sequences=True, go_backwards=False, dropout=dropout, recurrent_dropout=dropout)(
         x_conv)
