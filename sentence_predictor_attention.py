@@ -125,7 +125,8 @@ print('Build model...')
 
 
 def attention(inputs):
-    from keras.layers.convolutional import Conv1D, Conv2D
+    from keras.layers.convolutional import Conv2D
+    from keras.layers import TimeDistributed
 
     DIM_A = 32
     # This is based on [1] Bohdanau 2014 and [2] https://arxiv.org/pdf/1703.10089.pdf
@@ -137,14 +138,14 @@ def attention(inputs):
     teacher_shape = K.shape(teacher_seq)
     i = teacher_shape[1]
 
-    # # Transformaition layers, eq. 3 in [2]
-    # Wa = Dense(DIM_A, activation='linear', name='Wa')
-    # Ua = Dense(DIM_A, activation='linear', name='Ua')
+    # Transformaition layers, eq. 3 in [2]
+    Wa = Dense(DIM_A, activation='linear', name='Wa')
+    Ua = Dense(DIM_A, activation='linear', name='Ua')
     # apply linear transformations in equation (3) in [2]
-    # teacher_seq_wa = TimeDistributed(Wa)(teacher_seq)
-    # context_seq_ua = TimeDistributed(Ua)(context_seq)
-    teacher_seq_wa = Conv1D(filters=DIM_A, kernel_size=1, strides=1, activation='linear')(teacher_seq)
-    context_seq_ua = Conv1D(filters=DIM_A, kernel_size=1, strides=1, activation='linear')(context_seq)
+    teacher_seq_wa = TimeDistributed(Wa)(teacher_seq)
+    context_seq_ua = TimeDistributed(Ua)(context_seq)
+    # teacher_seq_wa = Conv1D(filters=DIM_A, kernel_size=1, strides=1, activation='linear')(teacher_seq)
+    # context_seq_ua = Conv1D(filters=DIM_A, kernel_size=1, strides=1, activation='linear')(context_seq)
 
     # tile to be able to produce weight matrix alpha in (i,j) space
     context_seq_ua = K.reshape(context_seq_ua, [-1, j, 1, DIM_A])
@@ -203,9 +204,9 @@ def get_encoder(lstm_width, dropout):
 
     x_fw = RNN_FUNC(lstm_width // 2, return_sequences=True, go_backwards=False, dropout=dropout, recurrent_dropout=dropout)(
         x_conv)
-    #x_bw = RNN_FUNC(lstm_width // 2, return_sequences=True, go_backwards=True, dropout=dropout, recurrent_dropout=dropout)(
-    #    x_conv)
-    #x = Concatenate(axis=2)([x_fw, x_bw])
+    # x_bw = RNN_FUNC(lstm_width // 2, return_sequences=True, go_backwards=True, dropout=dropout, recurrent_dropout=dropout)(
+    #     x_conv)
+    # x = Concatenate(axis=2)([x_fw, x_bw])
     x=x_fw
 
     encoder_output = RNN_FUNC(lstm_width, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)(x)
