@@ -127,6 +127,7 @@ print('Build model...')
 def attention(inputs):
     from keras.layers.convolutional import Conv2D
     from keras.layers import TimeDistributed
+    from keras.layers.merge import Add
 
     DIM_A = 32
     # This is based on [1] Bohdanau 2014 and [2] https://arxiv.org/pdf/1703.10089.pdf
