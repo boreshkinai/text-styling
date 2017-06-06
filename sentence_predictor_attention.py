@@ -202,6 +202,9 @@ def get_encoder(lstm_width, dropout):
     x_conv = Conv1D(filters=128, kernel_size=3, strides=1, padding='same', activation='relu')(x_conv)
     x_conv = BatchNormalization(axis=2)(x_conv)
     x_conv = MaxPooling1D(pool_size=2, strides=2)(x_conv)
+    x_conv = Conv1D(filters=128, kernel_size=3, strides=1, padding='same', activation='relu')(x_conv)
+    x_conv = BatchNormalization(axis=2)(x_conv)
+    x_conv = MaxPooling1D(pool_size=2, strides=2)(x_conv)
 
     x_fw = RNN_FUNC(lstm_width // 2, return_sequences=True, go_backwards=False, dropout=dropout, recurrent_dropout=dropout)(
         x_conv)
